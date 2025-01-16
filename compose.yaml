@@ -8,6 +8,8 @@ services:
       RADARR_API_KEY: "${RADARR_API_KEY}" # Radarr API Key
       SONARR_URL: "${SONARR_URL}" # Sonarr URL
       SONARR_API_KEY: "${SONARR_API_KEY}" # Sonarr API Key
+      WHISPARR_URL: "${WHISPARR_URL}" # WHISPARR URL
+      WHISPARR_API_KEY: "${WHISPARR_API_KEY}" # WHISPARR API Key
       STALLED_TIMEOUT: "${STALLED_TIMEOUT}" # How long a download should be stalled before handling it (in seconds)
       STALLED_ACTION: "${STALLED_ACTION}" # Options: REMOVE or BLOCKLIST or BLOCKLIST_AND_SEARCH
       VERBOSE: "${VERBOSE}" # Enable verbose/debug logging

@@ -14,6 +14,8 @@ RADARR_URL = os.getenv("RADARR_URL")
 RADARR_API_KEY = os.getenv("RADARR_API_KEY")
 SONARR_URL = os.getenv("SONARR_URL")
 SONARR_API_KEY = os.getenv("SONARR_API_KEY")
+WHISPARR_URL = os.getenv("SONARR_URL")
+WHISPARR_API_KEY = os.getenv("SONARR_API_KEY")
 STALLED_TIMEOUT = int(os.getenv("STALLED_TIMEOUT", 3600))
 STALLED_ACTION = os.getenv("STALLED_ACTION", "BLOCKLIST_AND_SEARCH").upper()
 VERBOSE = os.getenv("VERBOSE", "false").lower() == "true"
@@ -131,7 +133,7 @@ def detect_stuck_metadata_downloads(base_url, api_key, service_name):
     params = {
         "protocol": "torrent",
         "status": "queued",  # Only look for queued downloads
-        "includeEpisode": "true" if service_name == "Sonarr" else "false"
+        "includeEpisode": "true" if service_name == "Sonarr" or service_name == "Whisparr" else "false"
     }
 
     logging.info(f"Checking for stuck downloads ('Downloading Metadata') in {service_name}...")
@@ -150,7 +152,7 @@ def detect_stuck_metadata_downloads(base_url, api_key, service_name):
         if item.get("errorMessage", "").lower() == "qbittorrent is downloading metadata":
             download_id = str(item["id"])
             movie_id = item.get("movieId") if service_name == "Radarr" else None
-            episode_ids = [item["episodeId"]] if service_name == "Sonarr" and "episodeId" in item else None
+            episode_ids = [item["episodeId"]] if service_name == "Sonarr" or service_name == "Whisparr" and "episodeId" in item else None
 
             # Check if this download ID is already tracked in the database
             if download_id in detected_metadata_downloads:
@@ -220,7 +222,7 @@ def perform_action(base_url, headers, download_id, movie_id, service_name, episo
     action_desc = {
         "REMOVE": f"remove (ID: {download_id})",
         "BLOCKLIST": f"blocklist (ID: {download_id})",
-        "BLOCKLIST_AND_SEARCH": f"blocklist and search (ID: {download_id}, {'Episodes' if service_name == 'Sonarr' else 'Movie'}: {episode_ids if service_name == 'Sonarr' else movie_id})"
+        "BLOCKLIST_AND_SEARCH": f"blocklist and search (ID: {download_id}, {'Episodes' if service_name == 'Sonarr' or service_name == "Whisparr" else 'Movie'}: {episode_ids if service_name == 'Sonarr' or service_name == "Whisparr" else movie_id})"
     }.get(STALLED_ACTION, "INVALID ACTION")
 
     if STALLED_ACTION == "REMOVE":
@@ -268,7 +270,7 @@ def handle_stalled_downloads(base_url, api_key, service_name):
     params = {
         "protocol": "torrent",
         "status": "warning",  # Only look for stalled downloads
-        "includeEpisode": "true" if service_name == "Sonarr" else "false"
+        "includeEpisode": "true" if service_name == "Sonarr" or service_name == "Whisparr" else "false"
     }
 
     headers = {"X-Api-Key": api_key}
@@ -285,7 +287,7 @@ def handle_stalled_downloads(base_url, api_key, service_name):
         if item.get("errorMessage", "").lower() == "the download is stalled with no connections":
             download_id = str(item["id"])
             movie_id = item.get("movieId") if service_name == "Radarr" else None
-            episode_ids = [item["episodeId"]] if service_name == "Sonarr" and "episodeId" in item else None
+            episode_ids = [item["episodeId"]] if service_name == "Sonarr" or service_name == "Whisparr" and "episodeId" in item else None
 
             if download_id in stalled_downloads:
                 first_detected = stalled_downloads[download_id]
@@ -310,10 +312,11 @@ if __name__ == "__main__":
             # Handle regular stalled downloads
             handle_stalled_downloads(RADARR_URL, RADARR_API_KEY, "Radarr")
             handle_stalled_downloads(SONARR_URL, SONARR_API_KEY, "Sonarr")
-
+            handle_stalled_downloads(WHISPARR_URL, WHISPARR_API_KEY, "Whisparr")
             # Detect stuck downloads at "Downloading Metadata"
             detect_stuck_metadata_downloads(RADARR_URL, RADARR_API_KEY, "Radarr")
             detect_stuck_metadata_downloads(SONARR_URL, SONARR_API_KEY, "Sonarr")
+            detect_stuck_metadata_downloads(WHISPARR_URL, WHISPARR_API_KEY, "Whisparr")
 
             logging.info(f"Script execution completed. Sleeping for {RUN_INTERVAL} seconds...")
             time.sleep(RUN_INTERVAL)
